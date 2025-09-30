@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"        # optional; expose locally for tools
+    volumes:
+      - mongo_data:/data/db  # persistent DB storage
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: reports-app
+    env_file: .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./uploads:/usr/src/app/uploads  # persist uploaded files
+    depends_on:
+      mongo:
+        condition: service_healthy
+    # If your API needs to be reachable from other devices, consider:
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
+
+  # Optional: simple web UI for Mongo
+  mongo-express:
+    image: mongo-express:1.0.2-20
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_BASICAUTH: "false"
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  mongo_data:

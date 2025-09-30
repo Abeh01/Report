@@ -1,3 +1,18 @@
+/* -------- Base & Resets -------- */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body, #root {
+  background: var(--bs-body-bg);
+  color: var(--bs-body-color);
+  min-height: 100%;
+}
+
+/* Smooth theme transition */
+#root { transition: background-color .2s ease, color .2s ease; }
+
+/* App container */
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -5,38 +20,54 @@
   text-align: center;
 }
 
+/* -------- Topbar (theme toggle) -------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .5rem;
+  margin-bottom: 1rem;
+}
+.topbar .spacer { flex: 1; }
+
+/* -------- Logos -------- */
 .logo {
   height: 6em;
   padding: 1.5em;
   will-change: filter;
-  transition: filter 300ms;
+  transition: filter 300ms, transform 300ms;
+  max-width: 100%;
 }
+
+/* Subtle glow on hover, adapts to theme */
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+  filter: drop-shadow(0 0 1.5em color-mix(in oklab, var(--bs-primary), transparent 50%));
 }
 .logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+  filter: drop-shadow(0 0 1.5em color-mix(in oklab, #61dafb, transparent 40%));
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
+/* Spin the React logo only if user allows animations */
 @media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+  a:nth-of-type(2) .logo { animation: logo-spin infinite 20s linear; }
+}
+@keyframes logo-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
+/* -------- Card & Content -------- */
 .card {
   padding: 2em;
+  margin: 1rem auto;
+  background: var(--bs-card-bg, var(--bs-body-bg));
+  border: 1px solid var(--bs-border-color, rgba(0,0,0,.125));
+  border-radius: var(--bs-border-radius, .5rem);
+  box-shadow: var(--bs-box-shadow-sm, 0 .125rem .25rem rgba(0,0,0,.075));
 }
 
-.read-the-docs {
-  color: #888;
-}
+/* Space out buttons nicely (esp. link variants) */
+button, .btn { margin: .25rem .375rem; }
+
+/* Docs note—uses Bootstrap secondary color so it adapts in dark mode */
+.read-the-docs { color: var(--bs-secondary-color); }

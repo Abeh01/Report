@@ -4,16 +4,15 @@ import defaultImg from "./assets/default.jpg";
 
 function Report() {
   const [reports, setReports] = useState([]);
-  const [selectedGroup, setSelectedGroup] = useState(null); 
+  const [selectedGroup, setSelectedGroup] = useState(null);
   const [buildingFilter, setBuildingFilter] = useState("All Buildings");
   const [concernFilter, setConcernFilter] = useState("All Concerns");
-  const [showDuplicates, setShowDuplicates] = useState(false); // ✅ toggle state
+  const [showDuplicates, setShowDuplicates] = useState(false);
 
-  // ✅ Logout
   const handleLogout = () => {
     localStorage.removeItem("currentUser");
     sessionStorage.clear();
-    window.location.href = "/index.html"; 
+    window.location.href = "/index.html";
   };
 
   useEffect(() => {
@@ -30,10 +29,10 @@ function Report() {
     }
   };
 
-  const getDuplicateCounts = (reports) => {
+  const getDuplicateCounts = (items) => {
     const counts = {};
-    reports.forEach((report) => {
-      const key = `${report.building}-${report.concern}`;
+    items.forEach((r) => {
+      const key = `${r.building}-${r.concern}`;
       counts[key] = (counts[key] || 0) + 1;
     });
     return counts;
@@ -41,34 +40,46 @@ function Report() {
 
   const duplicateCounts = getDuplicateCounts(reports);
 
-  const filterUniqueReports = (reports) => {
+  const filterUniqueReports = (items) => {
     const seen = new Set();
-    return reports.filter((report) => {
-      const key = `${report.building}-${report.concern}`;
+    return items.filter((r) => {
+      const key = `${r.building}-${r.concern}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
   };
 
-  // ✅ Use toggle: show all or unique only
+  // Toggle handler: also exit any open group view to keep UI consistent
+  const toggleShowDuplicates = () => {
+    setSelectedGroup(null);
+    setShowDuplicates((v) => !v);
+  };
+
   const reportsToDisplay = showDuplicates ? reports : filterUniqueReports(reports);
 
   const getReportsByGroup = (groupKey) =>
     reports.filter((r) => `${r.building}-${r.concern}` === groupKey);
 
-  const buildingOptions = ["All Buildings", ...new Set(reports.map(r => r.building))];
-  const concernOptions = ["All Concerns", ...new Set(reports.map(r => r.concern))];
+  const buildingOptions = ["All Buildings", ...new Set(reports.map((r) => r.building))];
+  const concernOptions = ["All Concerns", ...new Set(reports.map((r) => r.concern))];
 
-  const filteredReports = reportsToDisplay.filter(report => {
+  const filteredReports = reportsToDisplay.filter((report) => {
     const buildingMatch = buildingFilter === "All Buildings" || report.building === buildingFilter;
     const concernMatch = concernFilter === "All Concerns" || report.concern === concernFilter;
     return buildingMatch && concernMatch;
   });
 
+  // Optional: keep same-group items adjacent when showing duplicates
+  const sortedReports = [...filteredReports].sort((a, b) => {
+    const ka = `${a.building}-${a.concern}`;
+    const kb = `${b.building}-${b.concern}`;
+    return ka.localeCompare(kb);
+  });
+
   return (
     <div className="report-wrapper">
-      {/* 🔹 Header with Logout */}
+      {/* Header */}
       <div className="header">
         <h1>REPORTS</h1>
         <button className="logout-btn" onClick={handleLogout}>
@@ -76,7 +87,7 @@ function Report() {
         </button>
       </div>
 
-      {/* 🔹 Filters */}
+      {/* Filters */}
       <div className="filters">
         <select value={buildingFilter} onChange={(e) => setBuildingFilter(e.target.value)}>
           {buildingOptions.map((b, idx) => (
@@ -90,26 +101,23 @@ function Report() {
           ))}
         </select>
 
-        {/* ✅ Checkbox to toggle duplicates */}
         <label className="duplicate-toggle">
           <input
             type="checkbox"
             checked={showDuplicates}
-            onChange={() => setShowDuplicates(!showDuplicates)}
+            onChange={toggleShowDuplicates}
           />
           Show Duplicates
         </label>
       </div>
 
-      {/* 🔹 Report List */}
+      {/* List / Group view */}
       {selectedGroup ? (
         <div className="reports-list">
-          <h2>
-            Similar Reports for <em>{selectedGroup}</em>
-          </h2>
-          <button onClick={() => setSelectedGroup(null)} className="back-btn">
-            ⬅ Back
-          </button>
+          <div className="group-header full-row">
+            <h2>Similar Reports for <em>{selectedGroup}</em></h2>
+            <button onClick={() => setSelectedGroup(null)} className="back-btn">Back</button>
+          </div>
 
           {getReportsByGroup(selectedGroup).map((report) => (
             <div key={report._id} className="report">
@@ -118,7 +126,7 @@ function Report() {
                   src={report.image ? `http://localhost:3000${report.image}` : defaultImg}
                   alt="Report"
                   className="report-img"
-                  onError={(e) => (e.target.src = defaultImg)}
+                  onError={(e) => (e.currentTarget.src = defaultImg)}
                 />
               </div>
               <div className="report-body">
@@ -127,7 +135,9 @@ function Report() {
                 <div className="report-info">
                   <p><strong>Building:</strong> {report.building}</p>
                   <p><strong>Concern:</strong> {report.concern}</p>
-                  <p className="status"><strong>Status:</strong> {report.status || "Pending"}</p>
+                  <p className={`status ${String((report.status || 'Pending')).toLowerCase().replace(/\s+/g, '-')}`}>
+                    <strong>Status:</strong> {report.status || "Pending"}
+                  </p>
                 </div>
                 <p className="submitted-date">
                   {new Date(report.createdAt).toLocaleDateString()}
@@ -138,18 +148,23 @@ function Report() {
         </div>
       ) : (
         <div className="reports-list">
-          {filteredReports.map((report) => {
+          {sortedReports.map((report) => {
             const key = `${report.building}-${report.concern}`;
-            const duplicates = (duplicateCounts[key] || 1) - 1;
+            const groupCount = duplicateCounts[key] || 1; // total in that group
+            const duplicates = groupCount - 1;
 
             return (
               <div key={report._id} className="report">
                 <div className="report-img-container">
+                  {/* Show a badge when we’re displaying duplicates so grouping is clear */}
+                  {showDuplicates && groupCount > 1 && (
+                    <span className="dup-badge">{groupCount} in group</span>
+                  )}
                   <img
                     src={report.image ? `http://localhost:3000${report.image}` : defaultImg}
                     alt="Report"
                     className="report-img"
-                    onError={(e) => (e.target.src = defaultImg)}
+                    onError={(e) => (e.currentTarget.src = defaultImg)}
                   />
                 </div>
                 <div className="report-body">
@@ -158,21 +173,23 @@ function Report() {
                   <div className="report-info">
                     <p><strong>Building:</strong> {report.building}</p>
                     <p><strong>Concern:</strong> {report.concern}</p>
-                    <p className="status"><strong>Status:</strong> {report.status || "Pending"}</p>
+                    <p className={`status ${String((report.status || 'Pending')).toLowerCase().replace(/\s+/g, '-')}`}>
+                      <strong>Status:</strong> {report.status || "Pending"}
+                    </p>
                   </div>
                   <p className="submitted-date">
                     {new Date(report.createdAt).toLocaleDateString()}
                   </p>
 
+                  {/* Only show “similar reports” link when NOT showing duplicates */}
                   {!showDuplicates && duplicates > 0 && (
-                    <p
+                    <button
+                      type="button"
                       className="duplicate-msg"
                       onClick={() => setSelectedGroup(key)}
-                      style={{ cursor: "pointer", color: "blue" }}
                     >
-                      Similar type of Report: ({duplicates}{" "}
-                      {duplicates === 1 ? "report" : "reports"})
-                    </p>
+                      View {duplicates} similar {duplicates === 1 ? "report" : "reports"}
+                    </button>
                   )}
                 </div>
               </div>

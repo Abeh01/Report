@@ -11,3 +11,18 @@
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
+
+
+<script>
+  (function() {
+    try {
+      var saved = localStorage.getItem('theme');
+      var theme = (saved === 'light' || saved === 'dark')
+        ? saved
+        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-bs-theme', theme);
+    } catch (_) {
+      document.documentElement.setAttribute('data-bs-theme', 'light');
+    }
+  })();
+</script>
